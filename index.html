@@ -294,7 +294,7 @@ a{color:var(--accent);text-decoration:none}
 <div class="modal-overlay" id="daily-confirm-overlay" onclick="if(event.target===this)cancelDaily()">
   <div class="modal" style="text-align:center;max-width:420px">
     <h3 style="margin-bottom:16px">Load Daily Data?</h3>
-    <p style="margin-bottom:20px">This will load <b id="daily-count-label">~5,000</b> daily data points which may cause your browser to lag.</p>
+    <p style="margin-bottom:20px">This will render <b id="daily-count-label"></b> data points across all charts, which may cause your browser to lag.</p>
     <div style="display:flex;gap:12px;justify-content:center">
       <button onclick="confirmDaily()" style="background:var(--accent);border:none;color:#fff;padding:8px 24px;border-radius:4px;cursor:pointer;font-size:12px;font-family:var(--mono)">Yes, continue</button>
       <button onclick="cancelDaily()" class="modal-close" style="margin-top:0">Cancel</button>
@@ -1186,7 +1186,9 @@ function setFreq(freq){
     alert('Daily data not yet available. Run the daily fetch script first.');return;
   }
   if(freq==='daily'&&currentFreq!=='daily'){
-    document.getElementById('daily-count-label').textContent=D.daily.date.length.toLocaleString();
+    const n=D.daily.date.length;
+    const fields=Object.keys(D.daily).length;
+    document.getElementById('daily-count-label').textContent=(n*fields).toLocaleString()+' ('+n.toLocaleString()+' days \u00d7 '+fields+' fields)';
     document.getElementById('daily-confirm-overlay').classList.add('show');
     return;
   }
