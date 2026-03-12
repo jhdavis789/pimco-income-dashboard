@@ -622,6 +622,7 @@ Chart.defaults.font.size=10;
 
 function sc(){return{grid:{color:'#1e1e2e'},ticks:{color:'#888898',font:{size:10,family:'"SF Mono","Fira Code",monospace'}}};}
 function tt(){return{backgroundColor:'#1a1a26',titleColor:'#00d4aa',bodyColor:'#e0e0e8',borderColor:'#2a2a3a',borderWidth:1,titleFont:{family:'"SF Mono","Fira Code",monospace',size:11},bodyFont:{family:'"SF Mono","Fira Code",monospace',size:11}};}
+function co(){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},eventAnnotations:true}};}
 function xticks(){return{...sc().ticks,maxTicksLimit:currentFreq==='daily'?16:12};}
 
 // Event annotation plugin
