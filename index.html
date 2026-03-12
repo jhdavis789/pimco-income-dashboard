@@ -155,6 +155,7 @@ a{color:var(--accent);text-decoration:none}
   <button class="nav-tab" data-section="spreads" onclick="showTab('spreads')">Spreads</button>
   <button class="nav-tab" data-section="yields" onclick="showTab('yields')">Yields</button>
   <button class="nav-tab" data-section="aum" onclick="showTab('aum')">AUM & Flows</button>
+  <button class="nav-tab" data-section="performance" onclick="showTab('performance')">Performance</button>
   <button class="nav-tab" data-section="data" onclick="showTab('data')">Data Table</button>
   <button class="nav-tab" data-section="audit" onclick="showTab('audit')">Audit</button>
   <button class="nav-tab" data-section="staleness" onclick="showTab('staleness')">Staleness</button>
@@ -214,6 +215,35 @@ a{color:var(--accent);text-decoration:none}
     <div class="panel"><div class="panel-header"><span class="panel-title">Implied Monthly Flow <span class="info-btn" onclick="showInfo('flow')">i</span></span><span class="source-tag">DERIVED</span></div><div class="panel-body"><div class="chart-wrap" style="height:260px"><canvas id="chart-flow"></canvas></div></div></div>
   </div>
   <div class="panel"><div class="panel-header"><span class="panel-title">Leverage Proxy (Portfolio MV / AUM) <span class="info-btn" onclick="showInfo('leverage')">i</span></span><span class="source-tag">DERIVED</span></div><div class="panel-body"><div class="chart-wrap" style="height:260px"><canvas id="chart-leverage"></canvas></div></div></div>
+</div>
+
+<!-- ═══════════ PERFORMANCE ═══════════ -->
+<div class="section" id="sec-performance">
+  <div class="stat-row" id="perf-summary"></div>
+  <div class="grid-2">
+    <div class="panel">
+      <span class="panel-title">Daily Total Return (After Fee) <span class="info-btn" onclick="showInfo('perf_return')">i</span></span>
+      <div class="panel-body"><div class="chart-wrap"><canvas id="chart-perf-daily"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <span class="panel-title">Cumulative Return: Fund vs Benchmark <span class="info-btn" onclick="showInfo('perf_cumulative')">i</span></span>
+      <div class="panel-body"><div class="chart-wrap"><canvas id="chart-perf-cumulative"></canvas></div></div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <span class="panel-title">Rolling 1-Year Return: Fund vs Benchmark <span class="info-btn" onclick="showInfo('perf_rolling')">i</span></span>
+      <div class="panel-body"><div class="chart-wrap"><canvas id="chart-perf-rolling"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <span class="panel-title">Daily Alpha (Fund − Benchmark) <span class="info-btn" onclick="showInfo('perf_alpha')">i</span></span>
+      <div class="panel-body"><div class="chart-wrap"><canvas id="chart-perf-alpha"></canvas></div></div>
+    </div>
+  </div>
+  <div class="panel">
+    <span class="panel-title">Cumulative Alpha (Since Inception) <span class="info-btn" onclick="showInfo('perf_cum_alpha')">i</span></span>
+    <div class="panel-body"><div class="chart-wrap"><canvas id="chart-perf-cum-alpha"></canvas></div></div>
+  </div>
 </div>
 
 <!-- ═══════════ DATA TABLE ═══════════ -->
@@ -499,14 +529,47 @@ const INFO = {
 <p>Each row shows the field name, start/end dates of the stale period, number of days, and the value that was repeated.</p>
 <p class="caveat">Only the first 20 stale runs per field are shown. Monthly-frequency fields are excluded from this check.</p>`
   },
+  perf_return: {
+    title: 'Daily Total Return',
+    body: `<p><b>What:</b> One-day total return after fees, from PIMCO's /performance endpoint. Total return includes both price change and distributions (dividends reinvested).</p>
+<p><b>Source:</b> afterFeePerformance.oneDay — this is NOT derivable from NAV alone since NAV drops on ex-dividend dates.</p>
+<p class="caveat">Data available from April 2007 (fund inception). Some dates return null (weekends, holidays).</p>`
+  },
+  perf_cumulative: {
+    title: 'Cumulative Return: Fund vs Benchmark',
+    body: `<p><b>What:</b> Growth of $1 invested at inception, comparing PIMIX (after fees) to its primary benchmark.</p>
+<div class="formula">Growth = (1 + sinceInception return) at each date</div>
+<p>Both series use the sinceInception field from the API — NOT compounded from daily returns. This is the official PIMCO calculation.</p>
+<p class="caveat">Benchmark identity is not disclosed in the API response.</p>`
+  },
+  perf_rolling: {
+    title: 'Rolling 1-Year Return',
+    body: `<p><b>What:</b> Trailing 1-year total return (after fees) at each date, comparing fund to benchmark.</p>
+<p><b>Source:</b> afterFeePerformance.oneYear and benchmarkPerformance.oneYear from the API.</p>
+<p class="caveat">First year of data shows null (no 1-year lookback available). This is NOT a rolling calculation — it's the API's own trailing return.</p>`
+  },
+  perf_alpha: {
+    title: 'Daily Alpha',
+    body: `<p><b>What:</b> Daily excess return = fund 1-day return minus benchmark 1-day return.</p>
+<div class="formula">alpha_1d = afterFeePerformance.oneDay − benchmarkPerformance.oneDay</div>
+<p class="caveat">Positive values mean PIMIX outperformed the benchmark that day. Very noisy on a daily basis.</p>`
+  },
+  perf_cum_alpha: {
+    title: 'Cumulative Alpha (Since Inception)',
+    body: `<p><b>What:</b> Cumulative outperformance vs benchmark since fund inception.</p>
+<div class="formula">alpha_si = afterFeePerformance.sinceInception − benchmarkPerformance.sinceInception</div>
+<p>This is the raw difference in cumulative returns, not a geometric excess return. Sourced directly from the API.</p>
+<p class="caveat">Rising line = PIMIX compounding ahead of benchmark. Flat = matching. Declining = underperforming.</p>`
+  },
 };
 
 // ─── LOAD DATA ───
 fetch('pimix_data.json').then(r=>r.json()).then(data=>{
   D=data;
   const dc=D.meta.daily_count||0;
+  const pc=D.meta.perf_count||0;
   document.getElementById('header-meta').textContent=
-    (dc?dc+' daily · ':'')+D.meta.monthly_count+' monthly · '+D.meta.weekly_count+' weekly · '+D.meta.first_date+' to '+D.meta.last_date;
+    (dc?dc+' daily · ':'')+D.meta.monthly_count+' monthly · '+D.meta.weekly_count+' weekly'+(pc?' · '+pc+' perf':'')+' · '+D.meta.first_date+' to '+D.meta.last_date;
   if(!dc){document.querySelector('[data-freq="daily"]').style.opacity='0.4';}
   buildAll();
 }).catch(e=>{
@@ -619,6 +682,7 @@ function buildAll(){
   buildSpreads();
   buildYields();
   buildAUM();
+  buildPerformance();
   buildTable();
   buildAudit();
   buildStaleness();
@@ -825,34 +889,123 @@ function buildAUM(){
   mc('chart-leverage',{type:'line',data:{labels:ld,datasets:[lineDS('MV/AUM',levA,'#f59e0b',{fill:true,backgroundColor:'#f59e0b20'})]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tt(),callbacks:{label:c=>c.parsed.y!=null?c.parsed.y.toFixed(3)+'x':'N/A'}},eventAnnotations:true},scales:{x:{...sc(),ticks:{...sc().ticks,maxTicksLimit:12}},y:{...sc(),ticks:{...sc().ticks,callback:v=>v.toFixed(2)+'x'}}}}});
 }
 
+// ─── PERFORMANCE TAB ───
+function buildPerformance(){
+  const P=D.performance;
+  if(!P||!P.date||P.date.length===0){
+    document.getElementById('perf-summary').innerHTML=
+      '<div class="stat-card"><div class="stat-label">Status</div><div class="stat-value">No performance data</div><div class="stat-sub">Run the performance fetch script first</div></div>';
+    return;
+  }
+  const dates=P.date;
+  const n=dates.length;
+  const lastIdx=n-1;
+  const pct=v=>v!==null&&v!==undefined?(v*100).toFixed(2)+'%':'—';
+  const pct4=v=>v!==null&&v!==undefined?(v*100).toFixed(4)+'%':'—';
+
+  // Summary cards
+  const r1d=P.return_1d[lastIdx];
+  const rytd=P.return_ytd[lastIdx];
+  const r1y=P.return_1y[lastIdx];
+  const rsi=P.return_si[lastIdx];
+  const asi=P.alpha_si[lastIdx];
+  document.getElementById('perf-summary').innerHTML=
+    '<div class="stat-card"><div class="stat-label">1-Day Return</div><div class="stat-value'+(r1d>=0?' accent':' red')+'">'+pct4(r1d)+'</div><div class="stat-sub">'+dates[lastIdx]+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">YTD Return</div><div class="stat-value'+(rytd>=0?' accent':' red')+'">'+pct(rytd)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">1-Year Return</div><div class="stat-value'+(r1y>=0?' accent':' red')+'">'+pct(r1y)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Since Inception</div><div class="stat-value accent">'+pct(rsi)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Alpha (SI)</div><div class="stat-value'+(asi>=0?' accent':' red')+'">'+pct(asi)+'</div><div class="stat-sub">vs benchmark</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Data Points</div><div class="stat-value">'+n.toLocaleString()+'</div><div class="stat-sub">'+dates[0]+' to '+dates[lastIdx]+'</div></div>';
+
+  // Apply date range filter to performance data
+  function perfSlice(){
+    let si=0,ei=n-1;
+    if(customStart||customEnd){
+      const s=customStart||dates[0],e=customEnd||dates[n-1];
+      while(si<n&&dates[si]<s)si++;
+      while(ei>0&&dates[ei]>e)ei--;
+    }else if(currentRange>0){
+      const cutoff=new Date();cutoff.setFullYear(cutoff.getFullYear()-currentRange);
+      const cs=cutoff.toISOString().slice(0,10);
+      while(si<n&&dates[si]<cs)si++;
+    }
+    return{si,ei:ei+1};
+  }
+  const{si:s,ei:e}=perfSlice();
+  const sd=dates.slice(s,e);
+
+  // 1. Daily return chart
+  mc('chart-perf-daily',{type:'line',data:{labels:sd,datasets:[
+    {label:'Daily Return (After Fee)',data:P.return_1d.slice(s,e),borderColor:'#6366f1',borderWidth:1,pointRadius:0,spanGaps:false,fill:false},
+  ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y*100).toFixed(4)+'%'}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>(v*100).toFixed(2)+'%'}}}}});
+
+  // 2. Cumulative return: fund vs benchmark (growth of $1)
+  const fundGrowth=P.return_si.slice(s,e).map(v=>v!==null?1+v:null);
+  const bmGrowth=P.bm_return_si.slice(s,e).map(v=>v!==null?1+v:null);
+  mc('chart-perf-cumulative',{type:'line',data:{labels:sd,datasets:[
+    {label:'PIMIX (After Fee)',data:fundGrowth,borderColor:'#6366f1',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:'Benchmark',data:bmGrowth,borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+  ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>{const v=c.parsed.y;return c.dataset.label+': $'+v.toFixed(4)+' ('+((v-1)*100).toFixed(2)+'%)';}}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>'$'+v.toFixed(2)}}}}});
+
+  // 3. Rolling 1-year return: fund vs benchmark
+  mc('chart-perf-rolling',{type:'line',data:{labels:sd,datasets:[
+    {label:'PIMIX 1Y Return',data:P.return_1y.slice(s,e),borderColor:'#6366f1',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:'Benchmark 1Y Return',data:P.bm_return_1y.slice(s,e),borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+  ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y*100).toFixed(2)+'%'}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>(v*100).toFixed(1)+'%'}}}}});
+
+  // 4. Daily alpha
+  mc('chart-perf-alpha',{type:'bar',data:{labels:sd,datasets:[
+    {label:'Daily Alpha',data:P.alpha_1d.slice(s,e),backgroundColor:P.alpha_1d.slice(s,e).map(v=>v>=0?'rgba(0,212,170,0.5)':'rgba(239,68,68,0.5)'),borderWidth:0},
+  ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y*100).toFixed(4)+'%'}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>(v*100).toFixed(2)+'%'}}}}});
+
+  // 5. Cumulative alpha (since inception)
+  mc('chart-perf-cum-alpha',{type:'line',data:{labels:sd,datasets:[
+    {label:'Cumulative Alpha (SI)',data:P.alpha_si.slice(s,e),borderColor:'#00d4aa',borderWidth:1.5,pointRadius:0,spanGaps:false,
+     fill:{target:'origin',above:'rgba(0,212,170,0.1)',below:'rgba(239,68,68,0.1)'}},
+  ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y*100).toFixed(2)+'%'}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>(v*100).toFixed(1)+'%'}}}}});
+}
+
 // ─── DATA TABLE ───
 function buildTable(){
   const d=getData();
   const cols=[
     {key:'date',label:'Date',fmt:v=>v},
     {key:'nav',label:'NAV',fmt:v=>v!=null?'$'+v.toFixed(2):''},
+    {key:'nav_change',label:'NAV Chg',fmt:v=>v!=null?v.toFixed(4):''},
+    {key:'nav_change_pct',label:'NAV Chg %',fmt:v=>v!=null?v.toFixed(4):''},
     {key:'aum',label:'AUM',fmt:v=>v!=null?'$'+fmtB(v):''},
+    {key:'aum_daily',label:'AUM Daily',fmt:v=>v!=null?'$'+fmtB(v):''},
+    {key:'shares',label:'Shares',fmt:v=>v!=null?fmtB(v):''},
+    {key:'shares_daily',label:'Shares Daily',fmt:v=>v!=null?fmtB(v):''},
+    {key:'portfolio_mv',label:'Port MV',fmt:v=>v!=null?'$'+fmtB(v):''},
     {key:'duration',label:'Duration',fmt:v=>v!=null?v.toFixed(2):''},
     {key:'bull_duration',label:'Bull Dur',fmt:v=>v!=null?v.toFixed(2):''},
     {key:'bear_duration',label:'Bear Dur',fmt:v=>v!=null?v.toFixed(2):''},
     {key:'curve_duration',label:'Curve Dur',fmt:v=>v!=null?v.toFixed(2):''},
-    {key:'ytm',label:'YTM %',fmt:v=>v!=null?v.toFixed(2):''},
-    {key:'current_yield',label:'CY %',fmt:v=>v!=null?v.toFixed(2):''},
-    {key:'sec_30d_yield',label:'SEC %',fmt:v=>v!=null?v.toFixed(2):''},
-    {key:'avg_quality',label:'Quality',fmt:v=>v||''},
     {key:'avg_maturity',label:'Avg Mat',fmt:v=>v!=null?v.toFixed(1):''},
+    {key:'avg_quality',label:'Quality',fmt:v=>v||''},
+    {key:'current_yield',label:'CY %',fmt:v=>v!=null?v.toFixed(2):''},
+    {key:'daily_current_yield',label:'Daily CY %',fmt:v=>v!=null?v.toFixed(2):''},
+    {key:'ytm',label:'YTM %',fmt:v=>v!=null?v.toFixed(2):''},
+    {key:'sec_30d_yield',label:'SEC %',fmt:v=>v!=null?v.toFixed(2):''},
+    {key:'unsub_sec_yield',label:'Unsub SEC %',fmt:v=>v!=null?v.toFixed(2):''},
+    {key:'etf_yield',label:'ETF Yield %',fmt:v=>v!=null?v.toFixed(2):''},
     {key:'mtg_spread',label:'Mtg Spd',fmt:v=>v!=null?v.toFixed(3):''},
     {key:'corp_spread',label:'Corp Spd',fmt:v=>v!=null?v.toFixed(3):''},
     {key:'swap_spread',label:'Swap Spd',fmt:v=>v!=null?v.toFixed(3):''},
     {key:'em_spread',label:'EM Spd',fmt:v=>v!=null?v.toFixed(3):''},
-    {key:'total_spread',label:'Tot Spd',fmt:v=>v!=null?v.toFixed(3):''},
-    {key:'dts',label:'DTS',fmt:v=>v!=null?v.toFixed(0):''},
+    {key:'covered_spread',label:'Cov Spd',fmt:v=>v!=null?v.toFixed(3):''},
+    {key:'sovg_spread',label:'Sovg Spd',fmt:v=>v!=null?v.toFixed(3):''},
+    {key:'ann_dist_yield',label:'Ann Dist Yld',fmt:v=>v!=null?(v*100).toFixed(2)+'%':''},
+    {key:'dist_rate',label:'Dist Rate',fmt:v=>v!=null?v.toFixed(4):''},
     {key:'latest_div',label:'Div/Sh',fmt:v=>v!=null?'$'+v.toFixed(4):''},
-    {key:'leverage_proxy',label:'Lev Proxy',fmt:v=>v!=null?v.toFixed(3):''},
+    {key:'div_ytd',label:'Div YTD',fmt:v=>v!=null?'$'+v.toFixed(4):''},
   ];
 
+  const nPeriods=d.date.length;
+  const nFields=cols.length-1; // exclude date
   document.getElementById('table-meta').textContent=
-    d.date.length+' data points · '+currentFreq+' · '+d.date[0]+' to '+d.date[d.date.length-1];
+    nPeriods.toLocaleString()+' datapoints \u00d7 '+nFields+' fields = '+(nPeriods*nFields).toLocaleString()+' cells \u00b7 '+currentFreq+' \u00b7 '+d.date[0]+' to '+d.date[d.date.length-1];
 
   let html='<table class="data-table"><thead><tr>';
   cols.forEach(c=>{html+='<th>'+c.label+'</th>';});
@@ -1247,11 +1400,13 @@ function exportCSV(){
   a.href=url;a.download='pimix_'+currentFreq+'.csv';a.click();
   URL.revokeObjectURL(url);
 }
-const FIELDS_FOR_CSV=['date','nav','aum','duration','bull_duration','bear_duration','curve_duration',
-  'avg_maturity','avg_quality','current_yield','ytm','sec_30d_yield','unsub_sec_yield','etf_yield',
-  'mtg_spread','corp_spread','swap_spread','em_spread','covered_spread','sovg_spread','total_spread',
-  'dts','convexity_proxy','bull_bear_asym','leverage_proxy','ann_dist_yield','latest_div','div_ytd',
-  'shares','portfolio_mv'];
+const FIELDS_FOR_CSV=['date','nav','nav_change','nav_change_pct',
+  'aum','aum_daily','shares','shares_daily','portfolio_mv',
+  'duration','bull_duration','bear_duration','curve_duration',
+  'avg_maturity','avg_quality',
+  'current_yield','daily_current_yield','ytm','sec_30d_yield','unsub_sec_yield','etf_yield',
+  'mtg_spread','corp_spread','swap_spread','em_spread','covered_spread','sovg_spread',
+  'ann_dist_yield','dist_rate','latest_div','div_ytd'];
 </script>
 </body>
 </html>
