@@ -22,6 +22,8 @@ a{color:var(--accent);text-decoration:none}
 .freq-btn{background:var(--bg-2);border:1px solid var(--border);color:var(--text-dim);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:10px;font-family:var(--mono);text-transform:uppercase}
 .freq-btn.active{background:var(--accent2);color:#fff;border-color:var(--accent2)}
 .freq-sep{color:var(--border);margin:0 4px}
+.date-input{background:var(--bg-2);border:1px solid var(--border);color:var(--text-dim);padding:3px 6px;border-radius:4px;font-size:10px;font-family:var(--mono);width:110px}
+.date-input::-webkit-calendar-picker-indicator{filter:invert(0.6)}
 
 /* Tabs */
 .nav-bar{background:var(--bg-1);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:0;overflow-x:auto}
@@ -82,6 +84,45 @@ a{color:var(--accent);text-decoration:none}
 
 /* Event annotations */
 .event-label{font-size:9px;font-family:var(--mono);fill:var(--text-dim)}
+
+/* Audit tab */
+.audit-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.audit-stat{background:var(--bg-1);border:1px solid var(--border);border-radius:6px;padding:16px;text-align:center}
+.audit-stat .num{font-size:28px;font-weight:700;font-family:var(--mono)}
+.audit-stat .lbl{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;font-family:var(--mono);margin-top:4px}
+.audit-stat.pass .num{color:#00d4aa}
+.audit-stat.warn .num{color:#f59e0b}
+.audit-stat.fail .num{color:#ef4444}
+.audit-stat.total .num{color:var(--text)}
+
+.audit-category{margin-bottom:20px}
+.audit-category-title{font-size:13px;font-weight:600;font-family:var(--mono);color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.audit-category-title .badge{font-size:9px;padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+
+.finding-card{background:var(--bg-1);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin-bottom:8px;border-left:3px solid var(--border)}
+.finding-card.sev-pass{border-left-color:#00d4aa}
+.finding-card.sev-warning{border-left-color:#f59e0b}
+.finding-card.sev-fail{border-left-color:#ef4444}
+
+.finding-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.finding-name{font-size:12px;font-weight:600;font-family:var(--mono);color:var(--text)}
+.finding-badge{font-size:9px;padding:2px 8px;border-radius:10px;font-family:var(--mono);font-weight:600}
+.finding-badge.pass{background:#00d4aa20;color:#00d4aa}
+.finding-badge.warning{background:#f59e0b20;color:#f59e0b}
+.finding-badge.fail{background:#ef444420;color:#ef4444}
+
+.finding-msg{font-size:11px;color:var(--text);margin-bottom:6px;line-height:1.5}
+.finding-detail{font-size:10px;font-family:var(--mono);color:var(--text-dim);line-height:1.6;background:var(--bg-2);padding:8px 10px;border-radius:4px;margin-top:6px;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+.finding-detail span{color:var(--accent3)}
+.finding-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px}
+.finding-meta-item{font-size:10px;color:var(--text-dim);font-family:var(--mono)}
+.finding-meta-item b{color:var(--text)}
+
+.coverage-bar{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.coverage-bar .field-name{font-size:10px;font-family:var(--mono);color:var(--text-dim);width:120px;text-align:right;flex-shrink:0}
+.coverage-bar .bar-bg{flex:1;height:14px;background:var(--bg-2);border-radius:3px;overflow:hidden;position:relative}
+.coverage-bar .bar-fill{height:100%;border-radius:3px;transition:width 0.3s}
+.coverage-bar .bar-pct{font-size:9px;font-family:var(--mono);color:var(--text-dim);width:45px;text-align:right;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -92,13 +133,19 @@ a{color:var(--accent);text-decoration:none}
     <div class="fund-meta" id="header-meta">Loading...</div>
   </div>
   <div class="header-controls">
-    <button class="freq-btn active" data-freq="monthly" onclick="setFreq('monthly')">Monthly</button>
+    <button class="freq-btn" data-freq="daily" onclick="setFreq('daily')">Daily</button>
     <button class="freq-btn" data-freq="weekly" onclick="setFreq('weekly')">Weekly</button>
+    <button class="freq-btn active" data-freq="monthly" onclick="setFreq('monthly')">Monthly</button>
     <span class="freq-sep">|</span>
+    <button class="range-btn" data-range="1" onclick="setRange(1)">1Y</button>
     <button class="range-btn" data-range="3" onclick="setRange(3)">3Y</button>
     <button class="range-btn" data-range="5" onclick="setRange(5)">5Y</button>
     <button class="range-btn" data-range="10" onclick="setRange(10)">10Y</button>
     <button class="range-btn active" data-range="0" onclick="setRange(0)">MAX</button>
+    <span class="freq-sep">|</span>
+    <input type="date" id="range-start" class="date-input" onchange="setCustomRange()">
+    <span style="color:var(--text-dim);font-size:10px">to</span>
+    <input type="date" id="range-end" class="date-input" onchange="setCustomRange()">
   </div>
 </div>
 
@@ -109,6 +156,8 @@ a{color:var(--accent);text-decoration:none}
   <button class="nav-tab" data-section="yields" onclick="showTab('yields')">Yields</button>
   <button class="nav-tab" data-section="aum" onclick="showTab('aum')">AUM & Flows</button>
   <button class="nav-tab" data-section="data" onclick="showTab('data')">Data Table</button>
+  <button class="nav-tab" data-section="audit" onclick="showTab('audit')">Audit</button>
+  <button class="nav-tab" data-section="staleness" onclick="showTab('staleness')">Staleness</button>
 </div>
 
 <div class="content">
@@ -176,6 +225,61 @@ a{color:var(--accent);text-decoration:none}
   <div class="panel"><div class="panel-body"><div class="data-table-wrap" id="table-wrap"></div></div></div>
 </div>
 
+<!-- ═══════════ AUDIT ═══════════ -->
+<div class="section" id="sec-audit">
+  <div class="audit-summary" id="audit-summary"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <span style="font-family:var(--mono);font-size:12px;color:var(--text-dim)" id="audit-meta"></span>
+    <span class="info-btn" onclick="showInfo('audit_methodology')" style="width:22px;height:22px;font-size:11px">i</span>
+  </div>
+
+  <!-- Coverage chart -->
+  <div class="panel"><div class="panel-header"><span class="panel-title">Data Completeness by Field <span class="info-btn" onclick="showInfo('completeness')">i</span></span><span class="source-tag">AUDIT</span></div><div class="panel-body" id="coverage-bars"></div></div>
+
+  <!-- Completeness heatmap -->
+  <div class="panel"><div class="panel-header"><span class="panel-title">Data Completeness Over Time <span class="info-btn" onclick="showInfo('heatmap')">i</span></span><span class="source-tag">AUDIT</span></div><div class="panel-body"><div class="chart-wrap" style="height:400px"><canvas id="chart-completeness-heatmap"></canvas></div></div></div>
+
+  <!-- Findings by category -->
+  <div id="audit-findings"></div>
+</div>
+
+<!-- ═══════════ STALENESS ═══════════ -->
+<div class="section" id="sec-staleness">
+  <div class="stat-row" id="staleness-summary"></div>
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Daily Update Verification <span class="info-btn" onclick="showInfo('staleness')">i</span></span>
+      <span class="source-tag">DAILY DATA AUDIT</span>
+    </div>
+    <div class="panel-body">
+      <p style="font-size:11px;color:var(--text-dim);margin-bottom:16px;font-family:var(--mono)">
+        For each field, shows how often the value actually changed between consecutive business days.
+        Fields expected to update daily should have high change rates. Fields that stay constant for 5+ consecutive
+        business days are flagged as "stale runs".
+      </p>
+      <div id="staleness-table-wrap"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Change Rate by Field <span class="info-btn" onclick="showInfo('change_rate')">i</span></span>
+      <span class="source-tag">DERIVED</span>
+    </div>
+    <div class="panel-body">
+      <div class="chart-wrap" style="height:400px"><canvas id="chart-change-rate"></canvas></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Stale Runs (5+ consecutive unchanged days) <span class="info-btn" onclick="showInfo('stale_runs')">i</span></span>
+      <span class="source-tag">DAILY DATA AUDIT</span>
+    </div>
+    <div class="panel-body">
+      <div id="stale-runs-wrap"></div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /content -->
 
 <!-- Modal -->
@@ -192,6 +296,8 @@ a{color:var(--accent);text-decoration:none}
 let D = null;
 let currentFreq = 'monthly';
 let currentRange = 0; // 0 = MAX
+let customStart = null; // custom date range
+let customEnd = null;
 let currentTab = 'overview';
 let charts = {};
 
@@ -341,33 +447,87 @@ const INFO = {
 <p>A ratio <b>above 1.0</b> would indicate explicit leverage (borrowing to buy more bonds).</p>
 <p class="caveat">For PIMIX, this has historically ranged from ~0.5 to 0.7, reflecting the significant derivatives overlay used for duration and spread management.</p>`
   },
+  audit_methodology: {
+    title: 'Audit Methodology',
+    body: `<p>This audit performs automated data quality checks across 3 layers:</p>
+<p><b>Layer 1: Internal Consistency</b> — Compares redundant fields in the raw PIMCO API JSON (e.g., monthEndNav vs dailyNav, eomAccountDuration vs accountDurationLBD). Also validates derived calculations (shares*NAV=AUM, spread sum, yield formulas).</p>
+<p><b>Layer 2: Cross-Source Validation</b> — Fetches PIMIX NAV and dividend history from Yahoo Finance and compares against PIMCO API values for all overlapping dates.</p>
+<p><b>Layer 3: Structural Anomaly Detection</b> — Scans for null transitions (fields appearing/disappearing), statistical outliers (>3 sigma moves), impossible values (negative NAV/AUM), leverage proxy outliers, and credit quality rating changes.</p>
+<p class="caveat">The audit is read-only — it never modifies data. All comparisons use the raw cached API JSON, not the extracted records, to avoid masking extraction-layer bugs. Tolerances are stated with each finding.</p>`
+  },
+  completeness: {
+    title: 'Data Completeness by Field',
+    body: `<p><b>What:</b> Percentage of monthly data points where each field has a non-null value.</p>
+<p>Fields with low coverage either started being reported later in the fund's history (e.g., curve duration from 2010) or have sporadic availability in the API.</p>
+<p class="caveat">100% coverage doesn't mean the values are correct — only that they are present.</p>`
+  },
+  heatmap: {
+    title: 'Data Completeness Over Time',
+    body: `<p><b>What:</b> A heatmap showing which fields are available (green) or null (dark) at each monthly date.</p>
+<p>Y-axis shows field names. X-axis shows dates. Green cells mean data is present; dark cells mean null.</p>
+<p class="caveat">This chart uses the Chart.js matrix plugin rendered as a scatter plot. Each dot represents one field-date pair.</p>`
+  },
+  staleness: {
+    title: 'Daily Update Verification',
+    body: `<p><b>What:</b> Verifies that daily-frequency fields actually change between consecutive business days.</p>
+<p>For each field, we compare every pair of consecutive daily data points. If the values are identical (within floating-point tolerance of 1e-10), that pair is "unchanged". If they differ, it's "changed".</p>
+<p><b>Change Rate:</b> The percentage of consecutive pairs where the value changed. Daily-updating fields should have a high change rate (typically 60-95%). A very low change rate suggests the API is returning stale data.</p>
+<p><b>Stale Runs:</b> Stretches of 5 or more consecutive business days where a field's value did not change at all. Short stale runs can be normal (e.g., holidays, low-activity periods), but long runs may indicate API issues.</p>
+<p><b>Expected Frequency:</b> Fields are categorized as "daily" (expected to change most days) or "monthly" (only expected to change at month boundaries). Monthly fields are not flagged for staleness even if they don't change for weeks.</p>
+<p class="caveat">A change rate below 50% for a daily field is unusual. A change rate of exactly 0% means the field never changed across the entire history, which likely means the API is returning a static/cached value for that field.</p>`
+  },
+  change_rate: {
+    title: 'Change Rate by Field',
+    body: `<p><b>What:</b> Horizontal bar chart showing the percentage of consecutive daily pairs where each field's value changed.</p>
+<p>Green bars (>70%) = healthy daily updating. Yellow bars (30-70%) = partial updating. Red bars (<30%) = mostly static.</p>
+<p>Fields marked "monthly" are expected to have low change rates and are shown in grey for reference.</p>`
+  },
+  stale_runs: {
+    title: 'Stale Runs',
+    body: `<p><b>What:</b> Lists every instance where a daily-frequency field held the exact same value for 5 or more consecutive business days.</p>
+<p>Each row shows the field name, start/end dates of the stale period, number of days, and the value that was repeated.</p>
+<p class="caveat">Only the first 20 stale runs per field are shown. Monthly-frequency fields are excluded from this check.</p>`
+  },
 };
 
 // ─── LOAD DATA ───
 fetch('pimix_data.json').then(r=>r.json()).then(data=>{
   D=data;
+  const dc=D.meta.daily_count||0;
   document.getElementById('header-meta').textContent=
-    D.meta.monthly_count+' monthly · '+D.meta.weekly_count+' weekly · '+D.meta.first_date+' to '+D.meta.last_date;
+    (dc?dc+' daily · ':'')+D.meta.monthly_count+' monthly · '+D.meta.weekly_count+' weekly · '+D.meta.first_date+' to '+D.meta.last_date;
+  if(!dc){document.querySelector('[data-freq="daily"]').style.opacity='0.4';}
   buildAll();
 }).catch(e=>{
   document.getElementById('header-meta').textContent='Error loading data: '+e;
 });
 
 // ─── HELPERS ───
-function getData(){return currentFreq==='weekly'?D.weekly:D.monthly;}
+function getData(){
+  if(currentFreq==='daily')return D.daily;
+  if(currentFreq==='weekly')return D.weekly;
+  return D.monthly;
+}
 
 function sliceRange(dates,arrays){
-  if(currentRange===0)return{dates,arrays};
-  const cutoff=new Date();
-  cutoff.setFullYear(cutoff.getFullYear()-currentRange);
-  const cutStr=cutoff.toISOString().slice(0,10);
-  let start=0;
-  for(let i=0;i<dates.length;i++){
-    if(dates[i]>=cutStr){start=i;break;}
+  if(currentRange===0&&!customStart&&!customEnd)return{dates,arrays};
+  let startStr,endStr;
+  if(customStart||customEnd){
+    startStr=customStart||dates[0];
+    endStr=customEnd||dates[dates.length-1];
+  }else{
+    const cutoff=new Date();
+    cutoff.setFullYear(cutoff.getFullYear()-currentRange);
+    startStr=cutoff.toISOString().slice(0,10);
+    endStr='9999-12-31';
   }
+  let si=0,ei=dates.length-1;
+  for(let i=0;i<dates.length;i++){if(dates[i]>=startStr){si=i;break;}}
+  for(let i=dates.length-1;i>=0;i--){if(dates[i]<=endStr){ei=i;break;}}
+  if(si>ei)si=ei;
   return{
-    dates:dates.slice(start),
-    arrays:arrays.map(a=>a?a.slice(start):null)
+    dates:dates.slice(si,ei+1),
+    arrays:arrays.map(a=>a?a.slice(si,ei+1):null)
   };
 }
 
@@ -388,6 +548,7 @@ Chart.defaults.font.size=10;
 
 function sc(){return{grid:{color:'#1e1e2e'},ticks:{color:'#888898',font:{size:10,family:'"SF Mono","Fira Code",monospace'}}};}
 function tt(){return{backgroundColor:'#1a1a26',titleColor:'#00d4aa',bodyColor:'#e0e0e8',borderColor:'#2a2a3a',borderWidth:1,titleFont:{family:'"SF Mono","Fira Code",monospace',size:11},bodyFont:{family:'"SF Mono","Fira Code",monospace',size:11}};}
+function xticks(){return{...sc().ticks,maxTicksLimit:currentFreq==='daily'?16:12};}
 
 // Event annotation plugin
 const eventPlugin={
@@ -436,7 +597,8 @@ function mc(id,cfg){
 }
 
 function lineDS(label,data,color,opts={}){
-  return{label,data,borderColor:color,backgroundColor:color+'20',borderWidth:1.5,pointRadius:0,pointHitRadius:4,tension:0,fill:opts.fill||false,spanGaps:false,...opts};
+  const bw=currentFreq==='daily'?1:1.5;
+  return{label,data,borderColor:color,backgroundColor:color+'20',borderWidth:bw,pointRadius:0,pointHitRadius:4,tension:0,fill:opts.fill||false,spanGaps:false,...opts};
 }
 
 // ─── BUILD ALL ───
@@ -447,6 +609,8 @@ function buildAll(){
   buildYields();
   buildAUM();
   buildTable();
+  buildAudit();
+  buildStaleness();
 }
 
 // ─── OVERVIEW TAB ───
@@ -698,6 +862,297 @@ function buildTable(){
   document.getElementById('table-wrap').innerHTML=html;
 }
 
+// ─── AUDIT TAB ───
+function buildAudit(){
+  if(!D.audit) return;
+  const a=D.audit;
+  const s=a.summary;
+
+  // Summary stats
+  document.getElementById('audit-summary').innerHTML=
+    '<div class="audit-stat total"><div class="num">'+s.checks_run+'</div><div class="lbl">Checks Run</div></div>'+
+    '<div class="audit-stat pass"><div class="num">'+s.passes+'</div><div class="lbl">Passed</div></div>'+
+    '<div class="audit-stat warn"><div class="num">'+s.warnings+'</div><div class="lbl">Warnings</div></div>'+
+    '<div class="audit-stat fail"><div class="num">'+s.failures+'</div><div class="lbl">Failures</div></div>';
+
+  document.getElementById('audit-meta').textContent=
+    'Audit run: '+s.timestamp.replace('T',' ').slice(0,19);
+
+  // Coverage bars
+  const comp=a.completeness;
+  if(comp && comp.field_coverage){
+    let barsHtml='';
+    const entries=Object.entries(comp.field_coverage).sort((a,b)=>b[1].pct-a[1].pct);
+    entries.forEach(([field,info])=>{
+      const pct=info.pct;
+      const color=pct>=95?'#00d4aa':pct>=70?'#f59e0b':'#ef4444';
+      barsHtml+='<div class="coverage-bar">'+
+        '<span class="field-name">'+field+'</span>'+
+        '<div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
+        '<span class="bar-pct">'+pct+'% ('+info.present+'/'+info.total+')</span>'+
+        '</div>';
+    });
+    document.getElementById('coverage-bars').innerHTML=barsHtml;
+  }
+
+  // Completeness heatmap (as a scatter/matrix chart)
+  if(comp && comp.dates && comp.fields && comp.matrix){
+    const fields=comp.fields;
+    const dates=comp.dates;
+    // Sample dates to max ~80 for readability
+    const step=Math.max(1,Math.floor(dates.length/80));
+    const sampledIdx=[];
+    for(let i=0;i<dates.length;i+=step) sampledIdx.push(i);
+    if(sampledIdx[sampledIdx.length-1]!==dates.length-1) sampledIdx.push(dates.length-1);
+
+    const sampledDates=sampledIdx.map(i=>dates[i]);
+    // Build datasets: one per field
+    const datasets=[];
+    fields.forEach((field,fIdx)=>{
+      const present=[];
+      const missing=[];
+      sampledIdx.forEach((dIdx,sIdx)=>{
+        const val=comp.matrix[field][dIdx];
+        if(val===1){
+          present.push({x:sIdx,y:fIdx});
+        } else {
+          missing.push({x:sIdx,y:fIdx});
+        }
+      });
+      if(present.length>0){
+        datasets.push({
+          label:field+' (present)',
+          data:present,
+          backgroundColor:'#00d4aa',
+          pointRadius:3,
+          pointStyle:'rect',
+          showLine:false,
+        });
+      }
+      if(missing.length>0){
+        datasets.push({
+          label:field+' (missing)',
+          data:missing,
+          backgroundColor:'#2a2a3a',
+          pointRadius:3,
+          pointStyle:'rect',
+          showLine:false,
+        });
+      }
+    });
+
+    mc('chart-completeness-heatmap',{
+      type:'scatter',
+      data:{datasets:datasets},
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            ...tt(),
+            callbacks:{
+              label:function(ctx){
+                const fIdx=ctx.parsed.y;
+                const sIdx=ctx.parsed.x;
+                const fn=fields[fIdx]||'?';
+                const dt=sampledDates[sIdx]||'?';
+                const present=ctx.dataset.label.includes('present');
+                return fn+' @ '+dt+': '+(present?'Present':'Missing');
+              }
+            }
+          }
+        },
+        scales:{
+          x:{
+            type:'linear',
+            min:-0.5,
+            max:sampledDates.length-0.5,
+            ticks:{
+              callback:function(v){
+                const i=Math.round(v);
+                if(i>=0&&i<sampledDates.length){
+                  return sampledDates[i].slice(0,7);
+                }
+                return '';
+              },
+              maxTicksLimit:15,
+              color:'#888898',
+              font:{size:9,family:'"SF Mono","Fira Code",monospace'}
+            },
+            grid:{color:'#1e1e2e'}
+          },
+          y:{
+            type:'linear',
+            min:-0.5,
+            max:fields.length-0.5,
+            reverse:true,
+            ticks:{
+              callback:function(v){
+                const i=Math.round(v);
+                return fields[i]||'';
+              },
+              stepSize:1,
+              color:'#888898',
+              font:{size:9,family:'"SF Mono","Fira Code",monospace'}
+            },
+            grid:{color:'#1e1e2e'}
+          }
+        }
+      }
+    });
+  }
+
+  // Findings grouped by category
+  const categoryLabels={
+    'internal':'Layer 1: Internal Consistency',
+    'cross_source':'Layer 2: Cross-Source Validation',
+    'anomaly':'Layer 3: Structural Anomaly Detection'
+  };
+  const categoryOrder=['internal','cross_source','anomaly'];
+  const grouped={};
+  a.findings.forEach(f=>{
+    if(!grouped[f.category]) grouped[f.category]=[];
+    grouped[f.category].push(f);
+  });
+
+  let findingsHtml='';
+  categoryOrder.forEach(cat=>{
+    const items=grouped[cat]||[];
+    if(!items.length) return;
+    const catPasses=items.filter(f=>f.severity==='pass').length;
+    const catWarns=items.filter(f=>f.severity==='warning').length;
+    const catFails=items.filter(f=>f.severity==='fail').length;
+
+    findingsHtml+='<div class="audit-category">';
+    findingsHtml+='<div class="audit-category-title">'+categoryLabels[cat]+' ';
+    if(catPasses) findingsHtml+='<span class="badge" style="background:#00d4aa20;color:#00d4aa">'+catPasses+' pass</span>';
+    if(catWarns) findingsHtml+='<span class="badge" style="background:#f59e0b20;color:#f59e0b">'+catWarns+' warn</span>';
+    if(catFails) findingsHtml+='<span class="badge" style="background:#ef444420;color:#ef4444">'+catFails+' fail</span>';
+    findingsHtml+='</div>';
+
+    items.forEach(f=>{
+      findingsHtml+='<div class="finding-card sev-'+f.severity+'">';
+      findingsHtml+='<div class="finding-header">';
+      findingsHtml+='<span class="finding-name">'+f.check+'</span>';
+      findingsHtml+='<span class="finding-badge '+f.severity+'">'+f.severity.toUpperCase()+'</span>';
+      findingsHtml+='</div>';
+      findingsHtml+='<div class="finding-msg">'+f.message+'</div>';
+
+      // Details block
+      let hasDetail=false;
+      let detailHtml='';
+      if(f.expected){
+        detailHtml+='<span>Expected:</span> '+f.expected+'\n';
+        hasDetail=true;
+      }
+      if(f.actual){
+        detailHtml+='<span>Actual:</span> '+f.actual+'\n';
+        hasDetail=true;
+      }
+      if(f.tolerance){
+        detailHtml+='<span>Tolerance:</span> '+f.tolerance+'\n';
+        hasDetail=true;
+      }
+      if(f.dates && f.dates.length){
+        detailHtml+='<span>Dates:</span> '+f.dates.join(', ')+'\n';
+        hasDetail=true;
+      }
+      if(hasDetail){
+        findingsHtml+='<div class="finding-detail">'+detailHtml.trim()+'</div>';
+      }
+
+      findingsHtml+='</div>';
+    });
+
+    findingsHtml+='</div>';
+  });
+
+  document.getElementById('audit-findings').innerHTML=findingsHtml;
+}
+
+// ─── STALENESS TAB ───
+function buildStaleness(){
+  const st=D.staleness;
+  if(!st||!st.field_stats||st.summary.status==='insufficient_data'){
+    document.getElementById('staleness-summary').innerHTML=
+      '<div class="stat-card"><div class="stat-label">Status</div><div class="stat-value">No daily data</div><div class="stat-sub">Run daily fetch first</div></div>';
+    return;
+  }
+  const sm=st.summary;
+
+  // Summary cards
+  document.getElementById('staleness-summary').innerHTML=
+    '<div class="stat-card"><div class="stat-label">Daily Data Points</div><div class="stat-value accent">'+sm.daily_count.toLocaleString()+'</div><div class="stat-sub">'+sm.date_range+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Daily Fields OK</div><div class="stat-value" style="color:#00d4aa">'+sm.daily_fields_ok+'</div><div class="stat-sub">Change rate >50%</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Stale Fields</div><div class="stat-value" style="color:'+(sm.daily_fields_stale>0?'#ef4444':'#00d4aa')+'">'+sm.daily_fields_stale+'</div><div class="stat-sub">Change rate ≤50%</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Status</div><div class="stat-value" style="color:'+(sm.status==='ok'?'#00d4aa':'#f59e0b')+'">'+(sm.status==='ok'?'HEALTHY':'CHECK')+'</div></div>';
+
+  // Main table
+  const fs=st.field_stats;
+  const fields=Object.keys(fs).sort((a,b)=>{
+    if(fs[a].expected_frequency!==fs[b].expected_frequency)return fs[a].expected_frequency==='daily'?-1:1;
+    return fs[b].change_rate-fs[a].change_rate;
+  });
+
+  let html='<table class="data-table"><thead><tr>';
+  html+='<th style="text-align:left">Field</th><th>Expected</th><th>Pairs</th><th>Changed</th><th>Unchanged</th><th>Change Rate</th><th>Stale Runs</th>';
+  html+='</tr></thead><tbody>';
+  fields.forEach(f=>{
+    const s=fs[f];
+    const isDaily=s.expected_frequency==='daily';
+    const rateColor=isDaily?(s.change_rate>70?'#00d4aa':s.change_rate>30?'#f59e0b':'#ef4444'):'#888898';
+    html+='<tr>';
+    html+='<td style="text-align:left;color:var(--accent)">'+s.label+'</td>';
+    html+='<td><span style="color:'+(isDaily?'#6366f1':'#888898')+'">'+s.expected_frequency+'</span></td>';
+    html+='<td>'+s.total_pairs.toLocaleString()+'</td>';
+    html+='<td>'+s.changed.toLocaleString()+'</td>';
+    html+='<td>'+s.unchanged.toLocaleString()+'</td>';
+    html+='<td style="color:'+rateColor+';font-weight:600">'+s.change_rate+'%</td>';
+    html+='<td>'+(s.stale_runs.length>0?'<span style="color:#f59e0b">'+s.stale_runs.length+'</span>':'<span style="color:#00d4aa">0</span>')+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('staleness-table-wrap').innerHTML=html;
+
+  // Change rate chart
+  const labels=fields.map(f=>fs[f].label);
+  const rates=fields.map(f=>fs[f].change_rate);
+  const barColors=fields.map(f=>{
+    const s=fs[f];
+    if(s.expected_frequency==='monthly')return '#555570';
+    if(s.change_rate>70)return '#00d4aa';
+    if(s.change_rate>30)return '#f59e0b';
+    return '#ef4444';
+  });
+
+  mc('chart-change-rate',{type:'bar',data:{labels,datasets:[{label:'Change Rate %',data:rates,backgroundColor:barColors,borderWidth:0,borderRadius:2}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tt(),callbacks:{label:c=>c.parsed.x+'% of consecutive pairs changed'}}},scales:{x:{...sc(),max:100,ticks:{...sc().ticks,callback:v=>v+'%'}},y:{...sc(),ticks:{...sc().ticks,font:{size:10}}}}}});
+
+  // Stale runs detail
+  let allRuns=[];
+  fields.forEach(f=>{
+    fs[f].stale_runs.forEach(r=>{
+      allRuns.push({field:fs[f].label,expected:fs[f].expected_frequency,...r});
+    });
+  });
+  allRuns.sort((a,b)=>b.days-a.days);
+
+  if(allRuns.length===0){
+    document.getElementById('stale-runs-wrap').innerHTML='<p style="color:#00d4aa;font-family:var(--mono);font-size:12px">No stale runs detected. All daily fields are updating as expected.</p>';
+  }else{
+    let rhtml='<table class="data-table"><thead><tr><th style="text-align:left">Field</th><th>Start</th><th>End</th><th>Days</th><th>Stuck Value</th></tr></thead><tbody>';
+    allRuns.slice(0,100).forEach(r=>{
+      rhtml+='<tr><td style="text-align:left;color:var(--accent)">'+r.field+'</td>';
+      rhtml+='<td>'+r.start+'</td><td>'+r.end+'</td>';
+      rhtml+='<td style="color:'+(r.days>=20?'#ef4444':r.days>=10?'#f59e0b':'var(--text)')+'">'+r.days+'</td>';
+      const val=typeof r.value==='number'?r.value.toFixed(4):r.value;
+      rhtml+='<td>'+val+'</td></tr>';
+    });
+    rhtml+='</tbody></table>';
+    document.getElementById('stale-runs-wrap').innerHTML=rhtml;
+  }
+}
+
 // ─── NAVIGATION ───
 function showTab(tab){
   currentTab=tab;
@@ -708,13 +1163,31 @@ function showTab(tab){
 
 function setRange(yrs){
   currentRange=yrs;
+  customStart=null;customEnd=null;
+  document.getElementById('range-start').value='';
+  document.getElementById('range-end').value='';
   document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.range)===yrs));
   buildAll();
 }
 
 function setFreq(freq){
+  if(freq==='daily'&&(!D.daily||!D.daily.date||D.daily.date.length===0)){
+    alert('Daily data not yet available. Run the daily fetch script first.');return;
+  }
   currentFreq=freq;
   document.querySelectorAll('.freq-btn').forEach(b=>b.classList.toggle('active',b.dataset.freq===freq));
+  buildAll();
+}
+
+function setCustomRange(){
+  const s=document.getElementById('range-start').value;
+  const e=document.getElementById('range-end').value;
+  if(s)customStart=s;
+  if(e)customEnd=e;
+  if(customStart||customEnd){
+    currentRange=-1;
+    document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+  }
   buildAll();
 }
 
