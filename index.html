@@ -972,41 +972,28 @@ function buildTable(){
   const cols=[
     {key:'date',label:'Date',fmt:v=>v},
     {key:'nav',label:'NAV',fmt:v=>v!=null?'$'+v.toFixed(2):''},
-    {key:'nav_change',label:'NAV Chg',fmt:v=>v!=null?v.toFixed(4):''},
-    {key:'nav_change_pct',label:'NAV Chg %',fmt:v=>v!=null?v.toFixed(4):''},
     {key:'aum',label:'AUM',fmt:v=>v!=null?'$'+fmtB(v):''},
-    {key:'aum_daily',label:'AUM Daily',fmt:v=>v!=null?'$'+fmtB(v):''},
-    {key:'shares',label:'Shares',fmt:v=>v!=null?fmtB(v):''},
-    {key:'shares_daily',label:'Shares Daily',fmt:v=>v!=null?fmtB(v):''},
-    {key:'portfolio_mv',label:'Port MV',fmt:v=>v!=null?'$'+fmtB(v):''},
     {key:'duration',label:'Duration',fmt:v=>v!=null?v.toFixed(2):''},
     {key:'bull_duration',label:'Bull Dur',fmt:v=>v!=null?v.toFixed(2):''},
     {key:'bear_duration',label:'Bear Dur',fmt:v=>v!=null?v.toFixed(2):''},
     {key:'curve_duration',label:'Curve Dur',fmt:v=>v!=null?v.toFixed(2):''},
-    {key:'avg_maturity',label:'Avg Mat',fmt:v=>v!=null?v.toFixed(1):''},
-    {key:'avg_quality',label:'Quality',fmt:v=>v||''},
-    {key:'current_yield',label:'CY %',fmt:v=>v!=null?v.toFixed(2):''},
-    {key:'daily_current_yield',label:'Daily CY %',fmt:v=>v!=null?v.toFixed(2):''},
     {key:'ytm',label:'YTM %',fmt:v=>v!=null?v.toFixed(2):''},
+    {key:'current_yield',label:'CY %',fmt:v=>v!=null?v.toFixed(2):''},
     {key:'sec_30d_yield',label:'SEC %',fmt:v=>v!=null?v.toFixed(2):''},
-    {key:'unsub_sec_yield',label:'Unsub SEC %',fmt:v=>v!=null?v.toFixed(2):''},
-    {key:'etf_yield',label:'ETF Yield %',fmt:v=>v!=null?v.toFixed(2):''},
+    {key:'avg_quality',label:'Quality',fmt:v=>v||''},
+    {key:'avg_maturity',label:'Avg Mat',fmt:v=>v!=null?v.toFixed(1):''},
     {key:'mtg_spread',label:'Mtg Spd',fmt:v=>v!=null?v.toFixed(3):''},
     {key:'corp_spread',label:'Corp Spd',fmt:v=>v!=null?v.toFixed(3):''},
     {key:'swap_spread',label:'Swap Spd',fmt:v=>v!=null?v.toFixed(3):''},
     {key:'em_spread',label:'EM Spd',fmt:v=>v!=null?v.toFixed(3):''},
-    {key:'covered_spread',label:'Cov Spd',fmt:v=>v!=null?v.toFixed(3):''},
-    {key:'sovg_spread',label:'Sovg Spd',fmt:v=>v!=null?v.toFixed(3):''},
-    {key:'ann_dist_yield',label:'Ann Dist Yld',fmt:v=>v!=null?(v*100).toFixed(2)+'%':''},
-    {key:'dist_rate',label:'Dist Rate',fmt:v=>v!=null?v.toFixed(4):''},
+    {key:'total_spread',label:'Tot Spd',fmt:v=>v!=null?v.toFixed(3):''},
+    {key:'dts',label:'DTS',fmt:v=>v!=null?v.toFixed(0):''},
     {key:'latest_div',label:'Div/Sh',fmt:v=>v!=null?'$'+v.toFixed(4):''},
-    {key:'div_ytd',label:'Div YTD',fmt:v=>v!=null?'$'+v.toFixed(4):''},
+    {key:'leverage_proxy',label:'Lev Proxy',fmt:v=>v!=null?v.toFixed(3):''},
   ];
 
-  const nPeriods=d.date.length;
-  const nFields=cols.length-1; // exclude date
   document.getElementById('table-meta').textContent=
-    nPeriods.toLocaleString()+' datapoints \u00d7 '+nFields+' fields = '+(nPeriods*nFields).toLocaleString()+' cells \u00b7 '+currentFreq+' \u00b7 '+d.date[0]+' to '+d.date[d.date.length-1];
+    d.date.length+' data points · '+currentFreq+' · '+d.date[0]+' to '+d.date[d.date.length-1];
 
   let html='<table class="data-table"><thead><tr>';
   cols.forEach(c=>{html+='<th>'+c.label+'</th>';});
@@ -1401,13 +1388,11 @@ function exportCSV(){
   a.href=url;a.download='pimix_'+currentFreq+'.csv';a.click();
   URL.revokeObjectURL(url);
 }
-const FIELDS_FOR_CSV=['date','nav','nav_change','nav_change_pct',
-  'aum','aum_daily','shares','shares_daily','portfolio_mv',
-  'duration','bull_duration','bear_duration','curve_duration',
-  'avg_maturity','avg_quality',
-  'current_yield','daily_current_yield','ytm','sec_30d_yield','unsub_sec_yield','etf_yield',
-  'mtg_spread','corp_spread','swap_spread','em_spread','covered_spread','sovg_spread',
-  'ann_dist_yield','dist_rate','latest_div','div_ytd'];
+const FIELDS_FOR_CSV=['date','nav','aum','duration','bull_duration','bear_duration','curve_duration',
+  'avg_maturity','avg_quality','current_yield','ytm','sec_30d_yield','unsub_sec_yield','etf_yield',
+  'mtg_spread','corp_spread','swap_spread','em_spread','covered_spread','sovg_spread','total_spread',
+  'dts','convexity_proxy','bull_bear_asym','leverage_proxy','ann_dist_yield','latest_div','div_ytd',
+  'shares','portfolio_mv'];
 </script>
 </body>
 </html>
