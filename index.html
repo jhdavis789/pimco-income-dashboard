@@ -244,6 +244,16 @@ a{color:var(--accent);text-decoration:none}
     <span class="panel-title">Cumulative Alpha (Since Inception) <span class="info-btn" onclick="showInfo('perf_cum_alpha')">i</span></span>
     <div class="panel-body"><div class="chart-wrap"><canvas id="chart-perf-cum-alpha"></canvas></div></div>
   </div>
+  <div class="grid-2">
+    <div class="panel">
+      <span class="panel-title">Upside Capture Ratio (Rolling 36-Month) <span class="info-btn" onclick="showInfo('perf_upside_capture')">i</span></span>
+      <div class="panel-body"><div class="chart-wrap"><canvas id="chart-perf-upside-capture"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <span class="panel-title">Downside Capture Ratio (Rolling 36-Month) <span class="info-btn" onclick="showInfo('perf_downside_capture')">i</span></span>
+      <div class="panel-body"><div class="chart-wrap"><canvas id="chart-perf-downside-capture"></canvas></div></div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════ DATA TABLE ═══════════ -->
@@ -567,6 +577,41 @@ const INFO = {
 <div class="formula">alpha_si = afterFeePerformance.sinceInception − benchmarkPerformance.sinceInception</div>
 <p>This is the raw difference in cumulative returns, not a geometric excess return. Sourced directly from the API.</p>
 <p class="caveat">Rising line = PIMIX compounding ahead of benchmark. Flat = matching. Declining = underperforming.</p>`
+  },
+  perf_upside_capture: {
+    title: 'Upside Capture Ratio (Rolling 36-Month)',
+    body: `<p><b>What:</b> Measures how much of the benchmark's positive months PIMIX captures, over a rolling 36-month window.</p>
+<div class="formula">Upside Capture = (avg fund return in up months) / (avg benchmark return in up months) × 100</div>
+<p><b>Interpretation:</b></p>
+<ul style="font-size:12px;margin:4px 0 8px 16px">
+<li>&gt;100% = PIMIX gains more than the benchmark in up months</li>
+<li>100% = matches the benchmark in up months</li>
+<li>&lt;100% = PIMIX gains less than the benchmark in up months</li>
+</ul>
+<p><b>Benchmarks:</b></p>
+<ul style="font-size:12px;margin:4px 0 8px 16px">
+<li style="color:#f59e0b"><b>Primary:</b> Bloomberg US Aggregate Bond Index</li>
+<li style="color:#ef4444"><b>Secondary:</b> Bloomberg US High Yield 2% Issuer Capped Index</li>
+</ul>
+<p class="caveat">Monthly returns are compounded from daily returns. "Up months" = months where the benchmark had a positive return. Dashed line = 100% (neutral capture).</p>`
+  },
+  perf_downside_capture: {
+    title: 'Downside Capture Ratio (Rolling 36-Month)',
+    body: `<p><b>What:</b> Measures how much of the benchmark's negative months PIMIX captures, over a rolling 36-month window.</p>
+<div class="formula">Downside Capture = (avg fund return in down months) / (avg benchmark return in down months) × 100</div>
+<p><b>Interpretation:</b></p>
+<ul style="font-size:12px;margin:4px 0 8px 16px">
+<li>&lt;100% = PIMIX loses less than the benchmark in down months (good)</li>
+<li>100% = matches the benchmark in down months</li>
+<li>&gt;100% = PIMIX loses more than the benchmark in down months (bad)</li>
+</ul>
+<p><b>Ideal profile:</b> High upside capture + low downside capture = asymmetric return profile.</p>
+<p><b>Benchmarks:</b></p>
+<ul style="font-size:12px;margin:4px 0 8px 16px">
+<li style="color:#f59e0b"><b>Primary:</b> Bloomberg US Aggregate Bond Index</li>
+<li style="color:#ef4444"><b>Secondary:</b> Bloomberg US High Yield 2% Issuer Capped Index</li>
+</ul>
+<p class="caveat">Monthly returns are compounded from daily returns. "Down months" = months where the benchmark had a zero or negative return. Dashed line = 100% (neutral capture).</p>`
   },
 };
 
@@ -978,6 +1023,23 @@ function buildPerformance(){
     {label:'Cumulative Alpha vs '+BM1,data:P.alpha_si.slice(s,e),borderColor:'#00d4aa',borderWidth:1.5,pointRadius:0,spanGaps:false,
      fill:{target:'origin',above:'rgba(0,212,170,0.1)',below:'rgba(239,68,68,0.1)'}},
   ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y*100).toFixed(2)+'%'}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>(v*100).toFixed(1)+'%'}}}}});
+
+  // 6. Upside capture ratio (rolling 36-month)
+  const C=D.capture;
+  if(C&&C.date&&C.date.length>0){
+    const cd=C.date;
+    const capOpts={...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>c.dataset.label+': '+c.parsed.y.toFixed(1)+'%'}},annotation:{annotations:{line100:{type:'line',yMin:100,yMax:100,borderColor:'rgba(255,255,255,0.3)',borderWidth:1,borderDash:[4,4]}}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>v+'%'}}}};
+    mc('chart-perf-upside-capture',{type:'line',data:{labels:cd,datasets:[
+      {label:'vs '+BM1,data:C.upside_bm1,borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+      {label:'vs '+BM2,data:C.upside_bm2,borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    ]},options:capOpts});
+
+    // 7. Downside capture ratio (rolling 36-month)
+    mc('chart-perf-downside-capture',{type:'line',data:{labels:cd,datasets:[
+      {label:'vs '+BM1,data:C.downside_bm1,borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+      {label:'vs '+BM2,data:C.downside_bm2,borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    ]},options:capOpts});
+  }
 }
 
 // ─── DATA TABLE ───
