@@ -536,27 +536,34 @@ const INFO = {
 <p class="caveat">Data available from April 2007 (fund inception). Some dates return null (weekends, holidays).</p>`
   },
   perf_cumulative: {
-    title: 'Cumulative Return: Fund vs Benchmark',
-    body: `<p><b>What:</b> Growth of $1 invested at inception, comparing PIMIX (after fees) to its primary benchmark.</p>
+    title: 'Cumulative Return: Fund vs Benchmarks',
+    body: `<p><b>What:</b> Growth of $1 invested at inception, comparing PIMIX (after fees) to both benchmarks.</p>
 <div class="formula">Growth = (1 + sinceInception return) at each date</div>
-<p>Both series use the sinceInception field from the API — NOT compounded from daily returns. This is the official PIMCO calculation.</p>
-<p class="caveat">Benchmark identity is not disclosed in the API response.</p>`
+<p><b>Benchmarks:</b></p>
+<ul style="font-size:12px;margin:4px 0 8px 16px">
+<li style="color:#f59e0b"><b>Primary:</b> Bloomberg US Aggregate Bond Index — broad investment-grade US bond market</li>
+<li style="color:#ef4444"><b>Secondary:</b> Bloomberg US High Yield 2% Issuer Capped Index — below-investment-grade corporate bonds</li>
+</ul>
+<p>All series use the sinceInception field from the API — NOT compounded from daily returns. This is the official PIMCO calculation.</p>
+<p class="caveat">CUSIP for fund: 72201F490. Benchmark identities are from PIMIX prospectus; the API does not disclose them directly.</p>`
   },
   perf_rolling: {
     title: 'Rolling 1-Year Return',
-    body: `<p><b>What:</b> Trailing 1-year total return (after fees) at each date, comparing fund to benchmark.</p>
-<p><b>Source:</b> afterFeePerformance.oneYear and benchmarkPerformance.oneYear from the API.</p>
-<p class="caveat">First year of data shows null (no 1-year lookback available). This is NOT a rolling calculation — it's the API's own trailing return.</p>`
+    body: `<p><b>What:</b> Trailing 1-year total return (after fees) at each date, comparing fund to both benchmarks.</p>
+<p><b>Source:</b> afterFeePerformance.oneYear, benchmarkPerformance.oneYear, and secondaryBenchmarkPerformance.oneYear.</p>
+<p><b>Benchmarks:</b> Primary = Bloomberg US Agg, Secondary = Bloomberg US HY 2% Capped.</p>
+<p class="caveat">First year of data shows null (no 1-year lookback available). These are the API's own trailing returns, not our calculation.</p>`
   },
   perf_alpha: {
     title: 'Daily Alpha',
-    body: `<p><b>What:</b> Daily excess return = fund 1-day return minus benchmark 1-day return.</p>
+    body: `<p><b>What:</b> Daily excess return = fund 1-day return minus primary benchmark 1-day return.</p>
 <div class="formula">alpha_1d = afterFeePerformance.oneDay − benchmarkPerformance.oneDay</div>
+<p>Alpha is computed vs the <b>primary benchmark</b> (Bloomberg US Aggregate).</p>
 <p class="caveat">Positive values mean PIMIX outperformed the benchmark that day. Very noisy on a daily basis.</p>`
   },
   perf_cum_alpha: {
     title: 'Cumulative Alpha (Since Inception)',
-    body: `<p><b>What:</b> Cumulative outperformance vs benchmark since fund inception.</p>
+    body: `<p><b>What:</b> Cumulative outperformance vs primary benchmark (Bloomberg US Aggregate) since fund inception.</p>
 <div class="formula">alpha_si = afterFeePerformance.sinceInception − benchmarkPerformance.sinceInception</div>
 <p>This is the raw difference in cumulative returns, not a geometric excess return. Sourced directly from the API.</p>
 <p class="caveat">Rising line = PIMIX compounding ahead of benchmark. Flat = matching. Declining = underperforming.</p>`
@@ -898,11 +905,13 @@ function buildPerformance(){
       '<div class="stat-card"><div class="stat-label">Status</div><div class="stat-value">No performance data</div><div class="stat-sub">Run the performance fetch script first</div></div>';
     return;
   }
+  const BM1='Bloomberg US Aggregate (Primary)';
+  const BM2='Bloomberg US HY 2% Capped (Secondary)';
   const dates=P.date;
   const n=dates.length;
   const lastIdx=n-1;
-  const pct=v=>v!==null&&v!==undefined?(v*100).toFixed(2)+'%':'—';
-  const pct4=v=>v!==null&&v!==undefined?(v*100).toFixed(4)+'%':'—';
+  const pct=v=>v!==null&&v!==undefined?(v*100).toFixed(2)+'%':'\u2014';
+  const pct4=v=>v!==null&&v!==undefined?(v*100).toFixed(4)+'%':'\u2014';
 
   // Summary cards
   const r1d=P.return_1d[lastIdx];
@@ -915,7 +924,7 @@ function buildPerformance(){
     '<div class="stat-card"><div class="stat-label">YTD Return</div><div class="stat-value'+(rytd>=0?' accent':' red')+'">'+pct(rytd)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">1-Year Return</div><div class="stat-value'+(r1y>=0?' accent':' red')+'">'+pct(r1y)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Since Inception</div><div class="stat-value accent">'+pct(rsi)+'</div></div>'+
-    '<div class="stat-card"><div class="stat-label">Alpha (SI)</div><div class="stat-value'+(asi>=0?' accent':' red')+'">'+pct(asi)+'</div><div class="stat-sub">vs benchmark</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Alpha vs Primary (SI)</div><div class="stat-value'+(asi>=0?' accent':' red')+'">'+pct(asi)+'</div><div class="stat-sub">vs '+BM1+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Data Points</div><div class="stat-value">'+n.toLocaleString()+'</div><div class="stat-sub">'+dates[0]+' to '+dates[lastIdx]+'</div></div>';
 
   // Apply date range filter to performance data
@@ -935,33 +944,38 @@ function buildPerformance(){
   const{si:s,ei:e}=perfSlice();
   const sd=dates.slice(s,e);
 
-  // 1. Daily return chart
+  // 1. Daily return chart — all three
   mc('chart-perf-daily',{type:'line',data:{labels:sd,datasets:[
-    {label:'Daily Return (After Fee)',data:P.return_1d.slice(s,e),borderColor:'#6366f1',borderWidth:1,pointRadius:0,spanGaps:false,fill:false},
+    {label:'PIMIX (72201F490)',data:P.return_1d.slice(s,e),borderColor:'#6366f1',borderWidth:1,pointRadius:0,spanGaps:false,fill:false},
+    {label:BM1,data:P.bm_return_1d.slice(s,e),borderColor:'#f59e0b',borderWidth:0.8,pointRadius:0,spanGaps:false,fill:false},
+    {label:BM2,data:P.bm2_return_1d.slice(s,e),borderColor:'#ef4444',borderWidth:0.8,pointRadius:0,spanGaps:false,fill:false},
   ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y*100).toFixed(4)+'%'}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>(v*100).toFixed(2)+'%'}}}}});
 
-  // 2. Cumulative return: fund vs benchmark (growth of $1)
+  // 2. Cumulative return: fund vs both benchmarks (growth of $1)
   const fundGrowth=P.return_si.slice(s,e).map(v=>v!==null?1+v:null);
   const bmGrowth=P.bm_return_si.slice(s,e).map(v=>v!==null?1+v:null);
+  const bm2Growth=P.bm2_return_si.slice(s,e).map(v=>v!==null?1+v:null);
   mc('chart-perf-cumulative',{type:'line',data:{labels:sd,datasets:[
-    {label:'PIMIX (After Fee)',data:fundGrowth,borderColor:'#6366f1',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
-    {label:'Benchmark',data:bmGrowth,borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:'PIMIX (72201F490)',data:fundGrowth,borderColor:'#6366f1',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:BM1,data:bmGrowth,borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:BM2,data:bm2Growth,borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
   ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>{const v=c.parsed.y;return c.dataset.label+': $'+v.toFixed(4)+' ('+((v-1)*100).toFixed(2)+'%)';}}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>'$'+v.toFixed(2)}}}}});
 
-  // 3. Rolling 1-year return: fund vs benchmark
+  // 3. Rolling 1-year return: fund vs both benchmarks
   mc('chart-perf-rolling',{type:'line',data:{labels:sd,datasets:[
-    {label:'PIMIX 1Y Return',data:P.return_1y.slice(s,e),borderColor:'#6366f1',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
-    {label:'Benchmark 1Y Return',data:P.bm_return_1y.slice(s,e),borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:'PIMIX 1Y',data:P.return_1y.slice(s,e),borderColor:'#6366f1',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:BM1+' 1Y',data:P.bm_return_1y.slice(s,e),borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:BM2+' 1Y',data:P.bm2_return_1y.slice(s,e),borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
   ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y*100).toFixed(2)+'%'}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>(v*100).toFixed(1)+'%'}}}}});
 
-  // 4. Daily alpha
+  // 4. Daily alpha vs primary benchmark
   mc('chart-perf-alpha',{type:'bar',data:{labels:sd,datasets:[
-    {label:'Daily Alpha',data:P.alpha_1d.slice(s,e),backgroundColor:P.alpha_1d.slice(s,e).map(v=>v>=0?'rgba(0,212,170,0.5)':'rgba(239,68,68,0.5)'),borderWidth:0},
+    {label:'Daily Alpha vs '+BM1,data:P.alpha_1d.slice(s,e),backgroundColor:P.alpha_1d.slice(s,e).map(v=>v>=0?'rgba(0,212,170,0.5)':'rgba(239,68,68,0.5)'),borderWidth:0},
   ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y*100).toFixed(4)+'%'}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>(v*100).toFixed(2)+'%'}}}}});
 
-  // 5. Cumulative alpha (since inception)
+  // 5. Cumulative alpha vs primary (since inception)
   mc('chart-perf-cum-alpha',{type:'line',data:{labels:sd,datasets:[
-    {label:'Cumulative Alpha (SI)',data:P.alpha_si.slice(s,e),borderColor:'#00d4aa',borderWidth:1.5,pointRadius:0,spanGaps:false,
+    {label:'Cumulative Alpha vs '+BM1,data:P.alpha_si.slice(s,e),borderColor:'#00d4aa',borderWidth:1.5,pointRadius:0,spanGaps:false,
      fill:{target:'origin',above:'rgba(0,212,170,0.1)',below:'rgba(239,68,68,0.1)'}},
   ]},options:{...co(),plugins:{...co().plugins,tooltip:{...tt(),callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y*100).toFixed(2)+'%'}}},scales:{x:sc(),y:{...sc(),ticks:{...sc().ticks,callback:v=>(v*100).toFixed(1)+'%'}}}}});
 }
