@@ -1048,6 +1048,8 @@ function buildPerformance(){
 }
 
 // ─── CAPTURE RATIO CHARTS (window-switchable) ───
+const CAP_BM1='Bloomberg US Aggregate (Primary)';
+const CAP_BM2='Bloomberg US HY 2% Capped (Secondary)';
 let capUpChart=null, capDownChart=null, capWindow=36;
 function buildCaptureCharts(w){
   const CW=D.capture[String(w)];
@@ -1057,12 +1059,12 @@ function buildCaptureCharts(w){
   if(capUpChart){capUpChart.destroy();capUpChart=null;}
   if(capDownChart){capDownChart.destroy();capDownChart=null;}
   capUpChart=mc('chart-perf-upside-capture',{type:'line',data:{labels:cd,datasets:[
-    {label:'vs '+BM1,data:CW.upside_bm1,borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
-    {label:'vs '+BM2,data:CW.upside_bm2,borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:'vs '+CAP_BM1,data:CW.upside_bm1,borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:'vs '+CAP_BM2,data:CW.upside_bm2,borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
   ]},options:capOpts});
   capDownChart=mc('chart-perf-downside-capture',{type:'line',data:{labels:cd,datasets:[
-    {label:'vs '+BM1,data:CW.downside_bm1,borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
-    {label:'vs '+BM2,data:CW.downside_bm2,borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:'vs '+CAP_BM1,data:CW.downside_bm1,borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
+    {label:'vs '+CAP_BM2,data:CW.downside_bm2,borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,spanGaps:false,fill:false},
   ]},options:capOpts});
 }
 function setCaptureWindow(w){
