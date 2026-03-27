@@ -126,6 +126,46 @@ a{color:var(--accent);text-decoration:none}
 .range-btns{display:flex;gap:4px}
 .range-btns button{background:var(--bg-2);border:1px solid var(--border);color:var(--text-dim);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:10px;font-family:var(--mono)}
 .range-btns button.active{background:var(--accent);color:var(--bg-0);border-color:var(--accent);font-weight:600}
+/* Commentary tab */
+.commentary-controls{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.commentary-filter{background:var(--bg-2);border:1px solid var(--border);color:var(--text-dim);padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono);transition:all .15s}
+.commentary-filter:hover{color:var(--text);border-color:var(--text-dim)}
+.commentary-filter.active{background:var(--accent);color:var(--bg-0);border-color:var(--accent);font-weight:600}
+.commentary-count{font-size:10px;color:var(--text-dim);font-family:var(--mono);margin-left:auto}
+.commentary-timeline{position:relative}
+.commentary-entry{background:var(--bg-1);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-bottom:10px;border-left:3px solid var(--border);transition:border-color .2s}
+.commentary-entry:hover{border-color:var(--accent)}
+.commentary-entry.cat-macro{border-left-color:#888898}
+.commentary-entry.cat-duration{border-left-color:#6366f1}
+.commentary-entry.cat-spreads{border-left-color:#f59e0b}
+.commentary-entry.cat-yields{border-left-color:#00d4aa}
+.commentary-entry.cat-flows{border-left-color:#3b82f6}
+.commentary-entry.cat-quality{border-left-color:#a855f7}
+.commentary-entry-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.commentary-date{font-size:11px;font-family:var(--mono);color:var(--accent);font-weight:600;flex-shrink:0}
+.commentary-metric{font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:10px;font-weight:600}
+.commentary-metric.cat-macro{background:#88889820;color:#888898}
+.commentary-metric.cat-duration{background:#6366f120;color:#6366f1}
+.commentary-metric.cat-spreads{background:#f59e0b20;color:#f59e0b}
+.commentary-metric.cat-yields{background:#00d4aa20;color:#00d4aa}
+.commentary-metric.cat-flows{background:#3b82f620;color:#3b82f6}
+.commentary-metric.cat-quality{background:#a855f720;color:#a855f7}
+.commentary-direction{font-size:10px;font-family:var(--mono);font-weight:600;flex-shrink:0}
+.commentary-direction.dir-up{color:#ef4444}
+.commentary-direction.dir-down{color:#00d4aa}
+.commentary-direction.dir-high{color:#f59e0b}
+.commentary-direction.dir-low{color:#6366f1}
+.commentary-direction.dir-inflow{color:#3b82f6}
+.commentary-direction.dir-outflow{color:#ef4444}
+.commentary-direction.dir-context{color:#888898}
+.commentary-summary{font-size:12px;color:var(--text);line-height:1.6}
+.commentary-values{font-size:10px;font-family:var(--mono);color:var(--text-dim);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap}
+.commentary-values span{display:inline-flex;align-items:center;gap:4px}
+.commentary-values b{color:var(--text)}
+.commentary-year-marker{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--accent);padding:8px 0 4px 0;border-bottom:1px solid var(--border);margin:16px 0 12px 0}
+.commentary-load-more{display:block;width:100%;background:var(--bg-2);border:1px solid var(--border);color:var(--text-dim);padding:10px;border-radius:6px;cursor:pointer;font-size:11px;font-family:var(--mono);text-align:center;margin-top:12px;transition:all .15s}
+.commentary-load-more:hover{background:var(--accent);color:var(--bg-0);border-color:var(--accent)}
+
 .share-fab{position:fixed;bottom:24px;right:24px;z-index:8000;cursor:pointer;user-select:none}
 .share-fab-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;background:var(--bg-2);border:1px solid var(--border-bright,var(--border));color:var(--text-dim);font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;transition:all .25s;box-shadow:0 4px 16px rgba(0,0,0,.4);white-space:nowrap}
 .share-fab-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--bg-1)}
@@ -166,6 +206,7 @@ a{color:var(--accent);text-decoration:none}
   <button class="nav-tab" data-section="aum" onclick="showTab('aum')">AUM & Flows</button>
   <button class="nav-tab" data-section="performance" onclick="showTab('performance')">Performance</button>
   <button class="nav-tab" data-section="data" onclick="showTab('data')">Data Table</button>
+  <button class="nav-tab" data-section="commentary" onclick="showTab('commentary')">Commentary</button>
   <button class="nav-tab" data-section="audit" onclick="showTab('audit')">Audit</button>
   <button class="nav-tab" data-section="staleness" onclick="showTab('staleness')">Staleness</button>
 </div>
@@ -281,6 +322,35 @@ a{color:var(--accent);text-decoration:none}
     <button class="export-btn" onclick="exportCSV()">Export CSV</button>
   </div>
   <div class="panel"><div class="panel-body"><div class="data-table-wrap" id="table-wrap"></div></div></div>
+</div>
+
+<!-- ═══════════ COMMENTARY ═══════════ -->
+<div class="section" id="sec-commentary">
+  <div class="stat-row" id="commentary-stats"></div>
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Auto-Generated Commentary <span class="info-btn" onclick="showInfo('commentary')">i</span></span>
+      <span class="source-tag">DERIVED FROM MONTHLY DATA</span>
+    </div>
+    <div class="panel-body">
+      <p style="font-size:11px;color:var(--text-dim);margin-bottom:14px;font-family:var(--mono);line-height:1.6">
+        Algorithmic detection of regime shifts, inflection points, and notable changes across key fund metrics.
+        Events are detected by measuring rolling-window percentage changes against thresholds. Macro context events are included as anchors.
+      </p>
+      <div class="commentary-controls">
+        <button class="commentary-filter active" data-cat="all" onclick="filterCommentary('all')">All</button>
+        <button class="commentary-filter" data-cat="duration" onclick="filterCommentary('duration')">Duration</button>
+        <button class="commentary-filter" data-cat="spreads" onclick="filterCommentary('spreads')">Spreads</button>
+        <button class="commentary-filter" data-cat="yields" onclick="filterCommentary('yields')">Yields</button>
+        <button class="commentary-filter" data-cat="flows" onclick="filterCommentary('flows')">Flows</button>
+        <button class="commentary-filter" data-cat="quality" onclick="filterCommentary('quality')">Quality</button>
+        <button class="commentary-filter" data-cat="macro" onclick="filterCommentary('macro')">Macro</button>
+        <span class="commentary-count" id="commentary-count"></span>
+      </div>
+      <div class="commentary-timeline" id="commentary-timeline"></div>
+      <button class="commentary-load-more" id="commentary-load-more" onclick="loadMoreCommentary()" style="display:none">Load more</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════ AUDIT ═══════════ -->
@@ -557,6 +627,19 @@ const INFO = {
 <p>Each row shows the field name, start/end dates of the stale period, number of days, and the value that was repeated.</p>
 <p class="caveat">Only the first 20 stale runs per field are shown. Monthly-frequency fields are excluded from this check.</p>`
   },
+  commentary: {
+    title: 'Auto-Generated Commentary',
+    body: `<p><b>What:</b> Algorithmic detection of regime shifts, inflection points, and notable changes in fund positioning.</p>
+<p><b>How it works:</b></p>
+<ul style="font-size:12px;margin:4px 0 8px 16px">
+<li><b>Rolling shifts:</b> For each metric, we compute the percentage change over a rolling window (3-6 months). Changes exceeding the threshold (15-30% depending on metric volatility) are flagged.</li>
+<li><b>All-time extremes:</b> New all-time highs or lows in key metrics (duration, spreads, DTS, YTM, AUM, corporate spreads) are flagged after the first 12 months of data.</li>
+<li><b>Flow surges:</b> Month-over-month AUM changes exceeding 5% are flagged as large inflows or outflows.</li>
+<li><b>Quality changes:</b> Every credit quality grade migration is detected (e.g., A to A-, BBB+ to BBB).</li>
+</ul>
+<p><b>Macro context:</b> Hardcoded market events (Lehman, Taper Tantrum, COVID, etc.) are included as context anchors.</p>
+<p class="caveat">All commentary is derived mechanically from the data — no subjective judgment or forecasting. Duplicate detections within 2 months are collapsed to the largest magnitude.</p>`
+  },
   perf_return: {
     title: 'Daily Total Return',
     body: `<p><b>What:</b> One-day total return after fees, from PIMCO's /performance endpoint. Total return includes both price change and distributions (dividends reinvested).</p>
@@ -756,6 +839,7 @@ function buildAll(){
   buildAUM();
   buildPerformance();
   buildTable();
+  buildCommentary();
   buildAudit();
   buildStaleness();
 }
@@ -1330,6 +1414,94 @@ function buildAudit(){
   });
 
   document.getElementById('audit-findings').innerHTML=findingsHtml;
+}
+
+// ─── COMMENTARY TAB ───
+let commentaryFilter='all';
+let commentaryVisible=50;
+let commentaryFiltered=[];
+
+function buildCommentary(){
+  if(!D||!D.commentary) return;
+  const entries=D.commentary;
+  const total=entries.length;
+  const cats={};
+  entries.forEach(e=>{cats[e.category]=(cats[e.category]||0)+1;});
+
+  // Stats row
+  document.getElementById('commentary-stats').innerHTML=
+    '<div class="stat-card"><div class="stat-label">Total Events</div><div class="stat-value accent">'+total+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Duration</div><div class="stat-value" style="color:#6366f1">'+(cats.duration||0)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Spreads</div><div class="stat-value" style="color:#f59e0b">'+(cats.spreads||0)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Yields</div><div class="stat-value" style="color:#00d4aa">'+(cats.yields||0)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Flows</div><div class="stat-value" style="color:#3b82f6">'+(cats.flows||0)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Quality</div><div class="stat-value" style="color:#a855f7">'+(cats.quality||0)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Macro Context</div><div class="stat-value">'+(cats.macro||0)+'</div></div>';
+
+  filterCommentary('all');
+}
+
+function filterCommentary(cat){
+  commentaryFilter=cat;
+  commentaryVisible=50;
+  document.querySelectorAll('.commentary-filter').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
+
+  const entries=D.commentary||[];
+  commentaryFiltered=cat==='all'?entries:entries.filter(e=>e.category===cat);
+  renderCommentary();
+}
+
+function renderCommentary(){
+  const entries=commentaryFiltered;
+  const shown=entries.slice(0,commentaryVisible);
+  document.getElementById('commentary-count').textContent=entries.length+' entries'+(commentaryFilter!=='all'?' (filtered)':'');
+
+  let html='';
+  let lastYear='';
+  shown.forEach(e=>{
+    const yr=e.date.slice(0,4);
+    if(yr!==lastYear){
+      html+='<div class="commentary-year-marker">'+yr+'</div>';
+      lastYear=yr;
+    }
+
+    const dirLabel={up:'ROSE',down:'FELL',high:'ATH',low:'ATL',inflow:'INFLOW',outflow:'OUTFLOW',context:'EVENT'}[e.direction]||e.direction.toUpperCase();
+    const dirClass='dir-'+e.direction;
+    const catClass='cat-'+e.category;
+
+    html+='<div class="commentary-entry '+catClass+'">';
+    html+='<div class="commentary-entry-header">';
+    html+='<span class="commentary-date">'+e.date.slice(0,7)+'</span>';
+    html+='<span class="commentary-metric '+catClass+'">'+e.metric+'</span>';
+    html+='<span class="commentary-direction '+dirClass+'">'+dirLabel+'</span>';
+    html+='</div>';
+    html+='<div class="commentary-summary">'+e.summary+'</div>';
+
+    if(e.from_val||e.to_val){
+      html+='<div class="commentary-values">';
+      if(e.from_val) html+='<span>From: <b>'+e.from_val+'</b></span>';
+      if(e.to_val) html+='<span>To: <b>'+e.to_val+'</b></span>';
+      if(e.magnitude>0) html+='<span>Magnitude: <b>'+e.magnitude.toFixed(1)+'%</b></span>';
+      html+='</div>';
+    }
+
+    html+='</div>';
+  });
+
+  document.getElementById('commentary-timeline').innerHTML=html;
+
+  const btn=document.getElementById('commentary-load-more');
+  if(entries.length>commentaryVisible){
+    btn.style.display='block';
+    btn.textContent='Load more ('+Math.min(50,entries.length-commentaryVisible)+' of '+(entries.length-commentaryVisible)+' remaining)';
+  }else{
+    btn.style.display='none';
+  }
+}
+
+function loadMoreCommentary(){
+  commentaryVisible+=50;
+  renderCommentary();
 }
 
 // ─── STALENESS TAB ───
