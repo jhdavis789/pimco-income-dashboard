@@ -161,6 +161,10 @@ a{color:var(--accent);text-decoration:none}
 .share-fab-btn svg{width:14px;height:14px;fill:currentColor;flex-shrink:0}
 .share-toast{position:fixed;bottom:66px;right:24px;z-index:8001;background:var(--accent);color:#ffffff;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.5px;padding:8px 16px;border-radius:4px;opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none;white-space:nowrap}
 .share-toast.show{opacity:1;transform:translateY(0)}
+.chart-range-bar{display:flex;gap:2px;margin-left:auto;margin-right:8px}
+.cr-btn{background:none;border:1px solid var(--border);color:var(--text-dim);padding:1px 5px;border-radius:3px;font-size:9px;font-family:var(--mono);cursor:pointer;line-height:1.4}
+.cr-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cr-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -175,10 +179,13 @@ a{color:var(--accent);text-decoration:none}
     <button class="freq-btn" data-freq="weekly" onclick="setFreq('weekly')">Weekly</button>
     <button class="freq-btn active" data-freq="monthly" onclick="setFreq('monthly')">Monthly</button>
     <span class="freq-sep">|</span>
-    <button class="range-btn" data-range="1" onclick="setRange(1)">1Y</button>
-    <button class="range-btn" data-range="3" onclick="setRange(3)">3Y</button>
-    <button class="range-btn" data-range="5" onclick="setRange(5)">5Y</button>
-    <button class="range-btn" data-range="10" onclick="setRange(10)">10Y</button>
+    <button class="range-btn" data-range="1" onclick="setRange(1)">1M</button>
+    <button class="range-btn" data-range="3" onclick="setRange(3)">3M</button>
+    <button class="range-btn" data-range="6" onclick="setRange(6)">6M</button>
+    <button class="range-btn" data-range="12" onclick="setRange(12)">1Y</button>
+    <button class="range-btn" data-range="36" onclick="setRange(36)">3Y</button>
+    <button class="range-btn" data-range="60" onclick="setRange(60)">5Y</button>
+    <button class="range-btn" data-range="120" onclick="setRange(120)">10Y</button>
     <button class="range-btn active" data-range="0" onclick="setRange(0)">MAX</button>
     <span class="freq-sep">|</span>
     <input type="date" id="range-start" class="date-input" onchange="setCustomRange()">
@@ -399,13 +406,17 @@ a{color:var(--accent);text-decoration:none}
 </div>
 
 <div class="modal-overlay" id="daily-confirm-overlay" onclick="if(event.target===this)cancelDaily()">
-  <div class="modal" style="text-align:center;max-width:420px">
-    <h3 style="margin-bottom:16px">Load Daily Data?</h3>
-    <p style="margin-bottom:20px">This will render <b id="daily-count-label"></b> data points across all charts, which may cause your browser to lag.</p>
-    <div style="display:flex;gap:12px;justify-content:center">
-      <button onclick="confirmDaily()" style="background:var(--accent);border:none;color:#fff;padding:8px 24px;border-radius:4px;cursor:pointer;font-size:12px;font-family:var(--mono)">Yes, continue</button>
-      <button onclick="cancelDaily()" class="modal-close" style="margin-top:0">Cancel</button>
+  <div class="modal" style="text-align:center;max-width:480px">
+    <h3 style="margin-bottom:12px">Load Daily Data?</h3>
+    <p style="margin-bottom:8px;font-size:11px;color:var(--text-dim)">Daily mode renders many data points. Choose a range to limit browser load.</p>
+    <p style="margin-bottom:16px;font-size:11px;font-family:var(--mono)" id="daily-count-label"></p>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
+      <button onclick="confirmDailyRange(12)" class="cr-btn" style="padding:6px 14px;font-size:11px">1 Year</button>
+      <button onclick="confirmDailyRange(36)" class="cr-btn" style="padding:6px 14px;font-size:11px">3 Years</button>
+      <button onclick="confirmDailyRange(60)" class="cr-btn" style="padding:6px 14px;font-size:11px">5 Years</button>
+      <button onclick="confirmDailyRange(0)" style="background:var(--accent);border:none;color:#fff;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">All Data</button>
     </div>
+    <button onclick="cancelDaily()" class="modal-close" style="margin-top:0">Cancel</button>
   </div>
 </div>
 
@@ -701,6 +712,18 @@ fetch('pimix_data.json').then(r=>r.json()).then(data=>{
   document.getElementById('header-meta').textContent=
     (dc?dc+' daily · ':'')+D.meta.monthly_count+' monthly · '+D.meta.weekly_count+' weekly'+(pc?' · '+pc+' perf':'')+' · '+D.meta.first_date+' to '+D.meta.last_date;
   if(!dc){document.querySelector('[data-freq="daily"]').style.opacity='0.4';}
+  // Inject per-chart range buttons into every panel with a canvas
+  document.querySelectorAll('.panel-header').forEach(ph=>{
+    if(!ph.parentElement.querySelector('canvas'))return;
+    const bar=document.createElement('div');
+    bar.className='chart-range-bar';
+    bar.innerHTML=[1,3,6,12,36,60,120,0].map(m=>{
+      const lbl=m===0?'MAX':m<12?m+'M':m===12?'1Y':(m/12)+'Y';
+      return '<button class="cr-btn'+(m===0?' active':'')+'" data-cr="'+m+'" onclick="setRange('+m+')">'+lbl+'</button>';
+    }).join('');
+    const src=ph.querySelector('.source-tag');
+    if(src)ph.insertBefore(bar,src);else ph.appendChild(bar);
+  });
   buildAll();
   setTimeout(restoreFromHash,300);
 }).catch(e=>{
@@ -722,7 +745,7 @@ function sliceRange(dates,arrays){
     endStr=customEnd||dates[dates.length-1];
   }else{
     const cutoff=new Date();
-    cutoff.setFullYear(cutoff.getFullYear()-currentRange);
+    cutoff.setMonth(cutoff.getMonth()-currentRange);
     startStr=cutoff.toISOString().slice(0,10);
     endStr='9999-12-31';
   }
@@ -1060,7 +1083,7 @@ function buildPerformance(){
       while(si<n&&dates[si]<s)si++;
       while(ei>0&&dates[ei]>e)ei--;
     }else if(currentRange>0){
-      const cutoff=new Date();cutoff.setFullYear(cutoff.getFullYear()-currentRange);
+      const cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-currentRange);
       const cs=cutoff.toISOString().slice(0,10);
       while(si<n&&dates[si]<cs)si++;
     }
@@ -1558,12 +1581,13 @@ function showTab(tab){
   document.querySelectorAll('.nav-tab').forEach(b=>b.classList.toggle('active',b.dataset.section===tab));
 }
 
-function setRange(yrs){
-  currentRange=yrs;
+function setRange(months){
+  currentRange=months;
   customStart=null;customEnd=null;
   document.getElementById('range-start').value='';
   document.getElementById('range-end').value='';
-  document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.range)===yrs));
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.range)===months));
+  document.querySelectorAll('.cr-btn[data-cr]').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.cr)===months));
   buildAll();
 }
 
@@ -1573,8 +1597,7 @@ function setFreq(freq){
   }
   if(freq==='daily'&&currentFreq!=='daily'){
     const n=D.daily.date.length;
-    const fields=Object.keys(D.daily).length;
-    document.getElementById('daily-count-label').textContent=(n*fields).toLocaleString()+' ('+n.toLocaleString()+' days \u00d7 '+fields+' fields)';
+    document.getElementById('daily-count-label').textContent=n.toLocaleString()+' daily data points ('+D.meta.daily_start+' to '+D.meta.daily_end+')';
     document.getElementById('daily-confirm-overlay').classList.add('show');
     return;
   }
@@ -1582,10 +1605,16 @@ function setFreq(freq){
   document.querySelectorAll('.freq-btn').forEach(b=>b.classList.toggle('active',b.dataset.freq===freq));
   buildAll();
 }
-function confirmDaily(){
+function confirmDailyRange(months){
   document.getElementById('daily-confirm-overlay').classList.remove('show');
   currentFreq='daily';
+  currentRange=months;
+  customStart=null;customEnd=null;
+  document.getElementById('range-start').value='';
+  document.getElementById('range-end').value='';
   document.querySelectorAll('.freq-btn').forEach(b=>b.classList.toggle('active',b.dataset.freq==='daily'));
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.range)===months));
+  document.querySelectorAll('.cr-btn[data-cr]').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.cr)===months));
   buildAll();
 }
 function cancelDaily(){
@@ -1600,6 +1629,7 @@ function setCustomRange(){
   if(customStart||customEnd){
     currentRange=-1;
     document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.cr-btn[data-cr]').forEach(b=>b.classList.remove('active'));
   }
   buildAll();
 }
